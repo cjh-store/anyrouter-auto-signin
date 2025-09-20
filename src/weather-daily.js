@@ -33,7 +33,17 @@ async function main() {
         const weatherTips = weatherService.getWeatherTips(weatherInfo);
 
         // 构建完整的通知内容
-        const timeInfo = `⏰ 推送时间: ${new Date().toLocaleString('zh-CN')}`;
+        const beijingTime = new Date().toLocaleString('zh-CN', {
+            timeZone: 'Asia/Shanghai',
+            year: 'numeric',
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        const timeInfo = `⏰ 推送时间: ${beijingTime}`;
         
         const header = [
             '🌤️ 成都青羊区天气预报',

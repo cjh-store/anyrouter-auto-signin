@@ -115,7 +115,11 @@ class CaiyunWeatherService {
             const currentDesc = this.getWeatherDescription(realtime.skycon);
             const humidity = Math.round(realtime.humidity * 100);
             const windSpeed = Math.round(realtime.wind.speed * 3.6); // m/s 转 km/h
+            const windDirection = this.getWindDirection(realtime.wind.direction);
             const feelLike = Math.round(realtime.apparent_temperature);
+            const visibility = realtime.visibility || 0; // 能见度 km
+            const pressure = Math.round(realtime.pressure / 100); // Pa 转 hPa
+            const cloudRate = Math.round(realtime.cloudrate * 100); // 云量百分比
 
             // 今日天气
             const todayWeather = daily.skycon[0];
@@ -142,7 +146,11 @@ class CaiyunWeatherService {
                     description: currentDesc,
                     humidity: humidity,
                     windSpeed: windSpeed,
-                    feelsLike: feelLike
+                    windDirection: windDirection,
+                    feelsLike: feelLike,
+                    visibility: visibility,
+                    pressure: pressure,
+                    cloudRate: cloudRate
                 },
                 today: {
                     maxTemp: todayMax,
@@ -167,6 +175,18 @@ class CaiyunWeatherService {
             console.log(`[彩云天气] 解析天气数据失败: ${error.message}`);
             return this.getWeatherFallback();
         }
+    }
+
+    /**
+     * 将风向角度转换为中文描述
+     */
+    getWindDirection(degree) {
+        const directions = [
+            '北风', '东北风', '东风', '东南风',
+            '南风', '西南风', '西风', '西北风'
+        ];
+        const index = Math.round(degree / 45) % 8;
+        return directions[index];
     }
 
     /**
@@ -298,8 +318,9 @@ class CaiyunWeatherService {
             `🌤️ ${location}天气 (彩云天气)`,
             '- - - - - - - - - - - - - - - -',
             `🌡️ 当前: ${current.temperature}°C ${current.description}`,
-            `💧 湿度: ${current.humidity}% | 🌬️ 风速: ${current.windSpeed}km/h`,
-            `🤲 体感: ${current.feelsLike}°C`,
+            `💧 湿度: ${current.humidity}% | 🌬️ ${current.windDirection} ${current.windSpeed}km/h`,
+            `🤲 体感: ${current.feelsLike}°C | 👁️ 能见度: ${current.visibility}km`,
+            `📊 气压: ${current.pressure}hPa | ☁️ 云量: ${current.cloudRate}%`,
             '',
             `📅 今日: ${today.minTemp}°C ~ ${today.maxTemp}°C`,
             `☀️ ${today.description} | UV指数: ${today.uvIndex}`,
