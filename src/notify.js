@@ -36,7 +36,7 @@ class NotificationKit {
 		});
 
 		const mailOptions = {
-			from: `AnyRouter Assistant <${this.emailUser}>`,
+			from: `🤖 AnyRouter 自动签到助手 <${this.emailUser}>`,
 			to: this.emailTo,
 			subject: title
 		};

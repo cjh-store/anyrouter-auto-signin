@@ -34,53 +34,81 @@ async function main() {
 			process.exit(1);
 		}
 
-		// 构建通知内容
+		// 构建美化的通知内容
 		const notificationContent = [];
 		const results = checkResult.results;
 
 		// 添加每个账号的结果
 		for (const result of results) {
-			const status = result.success ? '[成功]' : '[失败]';
-			let accountResult = `${status} ${result.account}`;
+			const status = result.success ? '✅' : '❌';
+			const statusText = result.success ? '成功' : '失败';
+			
+			let accountResult = `${status} 账号 ${result.account.replace('账号 ', '')} - ${statusText}`;
+			
 			if (result.userInfo) {
-				accountResult += `\n${result.userInfo}`;
+				// 格式化余额信息，添加钱袋子emoji
+				const formattedUserInfo = result.userInfo.replace(':money:', '💰');
+				accountResult += `\n${formattedUserInfo}`;
 			}
+			
 			if (result.error) {
-				accountResult += ` - ${result.error.substring(0, 50)}...`;
+				accountResult += `\n🔴 ${result.error.substring(0, 50)}...`;
 			}
+			
 			notificationContent.push(accountResult);
 		}
 
-		// 构建统计信息
+		// 构建美化的统计信息
+		const successRate = ((checkResult.successCount / checkResult.totalCount) * 100).toFixed(0);
 		const summary = [
-			'[统计] 签到结果统计:',
-			`[成功] 成功: ${checkResult.successCount}/${checkResult.totalCount}`,
-			`[失败] 失败: ${checkResult.totalCount - checkResult.successCount}/${checkResult.totalCount}`
+			'📊 签到统计',
+			'- - - - - - - - - - - - - - - -',
+			`✅ 成功: ${checkResult.successCount}/${checkResult.totalCount} 账号`,
+			`❌ 失败: ${checkResult.totalCount - checkResult.successCount}/${checkResult.totalCount} 账号`,
+			`📈 成功率: ${successRate}%`
 		];
 
+		// 添加整体状态
+		let overallStatus;
 		if (checkResult.successCount === checkResult.totalCount) {
-			summary.push('[成功] 所有账号签到成功!');
+			overallStatus = '🎉 所有账号签到成功！';
 		} else if (checkResult.successCount > 0) {
-			summary.push('[警告] 部分账号签到成功');
+			overallStatus = '⚠️  部分账号签到成功';
 		} else {
-			summary.push('[错误] 所有账号签到失败');
+			overallStatus = '🚨 所有账号签到失败';
 		}
+		summary.push('', overallStatus);
 
-		const timeInfo = `[时间] 执行时间: ${new Date().toLocaleString('zh-CN')}`;
+		// 时间信息
+		const timeInfo = `⏰ 执行时间: ${new Date().toLocaleString('zh-CN')}`;
 
 		// 组合完整的通知内容
-		const fullNotifyContent = [
+		const header = [
+			'📬 AnyRouter 自动签到报告',
+			'= = = = = = = = = = = = = = = = = =',
 			timeInfo,
+			''
+		];
+
+		const footer = [
 			'',
+			'- - - - - - - - - - - - - - - -',
+			'🤖 自动签到脚本生成'
+		];
+
+		const fullNotifyContent = [
+			...header,
 			...notificationContent,
 			'',
-			...summary
+			...summary,
+			...footer
 		].join('\n');
 
 		console.log('\n' + fullNotifyContent);
 
 		// 发送通知
-		await notify.pushMessage('AnyRouter 签到结果', fullNotifyContent, 'text');
+		const emailTitle = `AnyRouter签到 ${checkResult.successCount === checkResult.totalCount ? '🎉' : checkResult.successCount > 0 ? '⚠️' : '🚨'}`;
+		await notify.pushMessage(emailTitle, fullNotifyContent, 'text');
 
 		// 设置退出码
 		process.exit(checkResult.successCount > 0 ? 0 : 1);
