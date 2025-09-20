@@ -30,7 +30,6 @@ async function main() {
 
         // 格式化天气信息
         const weatherContent = weatherService.formatWeatherForEmail(weatherInfo);
-        const weatherTips = weatherService.getWeatherTips(weatherInfo);
 
         // 构建完整的通知内容
         const beijingTime = new Date().toLocaleString('zh-CN', {
@@ -61,7 +60,6 @@ async function main() {
         const fullWeatherContent = [
             ...header,
             weatherContent,
-            weatherTips,
             ...footer
         ].join('\n');
 

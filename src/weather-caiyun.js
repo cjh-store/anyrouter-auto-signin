@@ -139,6 +139,20 @@ class CaiyunWeatherService {
             const uvIndex = daily.ultraviolet && daily.ultraviolet[0] ? 
                 Math.round(daily.ultraviolet[0].max) : '未知';
 
+            // 生活指数（今日）
+            const lifeIndex = daily.life_index || {};
+            const todayUVIndex = lifeIndex.ultraviolet && lifeIndex.ultraviolet[0] ? 
+                lifeIndex.ultraviolet[0].desc : '未知';
+            const todayColdRisk = lifeIndex.coldRisk && lifeIndex.coldRisk[0] ? 
+                lifeIndex.coldRisk[0].desc : '未知';
+            const todayDressing = lifeIndex.dressing && lifeIndex.dressing[0] ? 
+                lifeIndex.dressing[0].desc : '未知';
+            const todayCarWashing = lifeIndex.carWashing && lifeIndex.carWashing[0] ? 
+                lifeIndex.carWashing[0].desc : '未知';
+
+            // 天气关键描述
+            const forecastKeypoint = result.forecast_keypoint || '';
+
             const weatherInfo = {
                 location: this.location,
                 current: {
@@ -156,7 +170,11 @@ class CaiyunWeatherService {
                     maxTemp: todayMax,
                     minTemp: todayMin,
                     description: todayDesc,
-                    uvIndex: uvIndex
+                    uvIndex: uvIndex,
+                    uvDesc: todayUVIndex,
+                    coldRisk: todayColdRisk,
+                    dressing: todayDressing,
+                    carWashing: todayCarWashing
                 },
                 tomorrow: {
                     maxTemp: tomorrowMax,
@@ -164,6 +182,7 @@ class CaiyunWeatherService {
                     description: tomorrowDesc
                 },
                 hourly: hourly, // 添加小时级数据
+                forecastKeypoint: forecastKeypoint, // 天气关键描述
                 alerts: this.formatAlerts(result.alert || {})
             };
 
@@ -312,7 +331,7 @@ class CaiyunWeatherService {
             return `🌤️ ${weatherData.location}天气\n❌ ${weatherData.message}`;
         }
 
-        const { location, current, today, tomorrow, airQuality, alerts } = weatherData;
+        const { location, current, today, tomorrow, airQuality, forecastKeypoint, alerts } = weatherData;
 
         const weatherEmail = [
             `🌤️ ${location}天气 (彩云天气)`,
@@ -323,7 +342,7 @@ class CaiyunWeatherService {
             `📊 气压: ${current.pressure}hPa | ☁️ 云量: ${current.cloudRate}%`,
             '',
             `📅 今日: ${today.minTemp}°C ~ ${today.maxTemp}°C`,
-            `☀️ ${today.description} | UV指数: ${today.uvIndex}`,
+            `☀️ ${today.description} | 🌞 紫外线: ${today.uvDesc}`,
             '',
             `📅 明日: ${tomorrow.minTemp}°C ~ ${tomorrow.maxTemp}°C`,
             `☀️ ${tomorrow.description}`,
@@ -362,6 +381,16 @@ class CaiyunWeatherService {
             );
         }
 
+        // 添加天气关键预测
+        if (forecastKeypoint && forecastKeypoint.trim()) {
+            weatherEmail.push(
+                '',
+                '🎯 天气趋势',
+                '- - - - - - - - - - - - - - - -',
+                `📈 ${forecastKeypoint}`
+            );
+        }
+
         // 添加12小时天气预报
         const hourlyForecast = this.format12HourForecast(weatherData);
         if (hourlyForecast) {
@@ -370,6 +399,27 @@ class CaiyunWeatherService {
                 '⏰ 12小时预报',
                 '- - - - - - - - - - - - - - - -',
                 hourlyForecast
+            );
+        }
+
+        // 添加生活建议
+        const lifeAdvice = [];
+        if (today.coldRisk && today.coldRisk !== '未知') {
+            lifeAdvice.push(`🤧 感冒指数: ${today.coldRisk}`);
+        }
+        if (today.dressing && today.dressing !== '未知') {
+            lifeAdvice.push(`👕 穿衣建议: ${today.dressing}`);
+        }
+        if (today.carWashing && today.carWashing !== '未知') {
+            lifeAdvice.push(`🚗 洗车指数: ${today.carWashing}`);
+        }
+
+        if (lifeAdvice.length > 0) {
+            weatherEmail.push(
+                '',
+                '💡 生活建议',
+                '- - - - - - - - - - - - - - - -',
+                ...lifeAdvice
             );
         }
 
