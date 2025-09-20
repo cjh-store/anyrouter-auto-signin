@@ -1,4 +1,4 @@
-name: AnyRouter 自动签到
+name: 成都天气每日推送
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:  # 允许手动触发
 
 jobs:
-  checkin:
+  weather:
     runs-on: windows-latest
     environment: production
 
@@ -37,46 +37,22 @@ jobs:
         npm ci
         echo "✅ 依赖安装完成"
 
-    - name: 获取 Playwright 版本
-      id: playwright-version
-      run: |
-        $version = node -p "require('playwright/package.json').version"
-        echo "version=$version" >> $env:GITHUB_OUTPUT
-        echo "Playwright version: $version"
-
-    - name: 缓存 Playwright 浏览器
-      uses: actions/cache@v4
-      id: playwright-cache
-      with:
-        path: ~\AppData\Local\ms-playwright
-        key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
-        restore-keys: |
-          ${{ runner.os }}-playwright-
-
-    - name: 安装 Playwright 浏览器
-      if: steps.playwright-cache.outputs.cache-hit != 'true'
-      run: |
-        echo "缓存未命中，开始安装 Playwright 浏览器..."
-        npx playwright install chromium --with-deps
-        echo "✅ Playwright 浏览器安装完成"
-
-    - name: 执行签到
+    - name: 推送天气信息
       env:
-        ANYROUTER_ACCOUNTS: ${{ secrets.ANYROUTER_ACCOUNTS }}
-        DINGDING_WEBHOOK: ${{ secrets.DINGDING_WEBHOOK }}
         EMAIL_USER: ${{ secrets.EMAIL_USER }}
         EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        DINGDING_WEBHOOK: ${{ secrets.DINGDING_WEBHOOK }}
         PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
         SERVERPUSHKEY: ${{ secrets.SERVERPUSHKEY }}
         FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
         WEIXIN_WEBHOOK: ${{ secrets.WEIXIN_WEBHOOK }}
       run: |
-        echo "开始执行签到任务..."
-        npm start
+        echo "开始推送成都青羊区天气信息..."
+        node src/weather-daily.js
 
     - name: 执行结果
       if: always()
       run: |
-        echo "签到任务执行完成"
+        echo "天气推送任务执行完成"
         echo "时间: $(Get-Date)"

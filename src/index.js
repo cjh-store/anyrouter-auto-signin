@@ -119,9 +119,14 @@ async function main() {
 
 		// 尝试发送错误通知
 		try {
+			const errorMessage = [
+				`⚠️ 签到过程中发生错误:`,
+				error.message
+			].join('\n');
+
 			await notify.pushMessage(
-				'AnyRouter 签到错误',
-				`签到过程中发生错误:\n${error.message}`,
+				'AnyRouter 签到错误 🚨',
+				errorMessage,
 				'text'
 			);
 		} catch (notifyError) {
