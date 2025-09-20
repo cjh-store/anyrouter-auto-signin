@@ -121,19 +121,39 @@ class CaiyunWeatherService {
             const pressure = Math.round(realtime.pressure / 100); // Pa 转 hPa
             const cloudRate = Math.round(realtime.cloudrate * 100); // 云量百分比
 
-            // 今日天气
-            const todayWeather = daily.skycon[0];
-            const todayTemp = daily.temperature[0];
-            const todayMax = Math.round(todayTemp.max);
-            const todayMin = Math.round(todayTemp.min);
-            const todayDesc = this.getWeatherDescription(todayWeather.value);
+            // 实时生活指数
+            const realtimeLifeIndex = realtime.life_index || {};
+            const currentUVIndex = realtimeLifeIndex.ultraviolet ? 
+                realtimeLifeIndex.ultraviolet.desc : '未知';
+            const currentComfort = realtimeLifeIndex.comfort ? 
+                realtimeLifeIndex.comfort.desc : '未知';
 
-            // 明日天气
-            const tomorrowWeather = daily.skycon[1];
-            const tomorrowTemp = daily.temperature[1];
-            const tomorrowMax = Math.round(tomorrowTemp.max);
-            const tomorrowMin = Math.round(tomorrowTemp.min);
-            const tomorrowDesc = this.getWeatherDescription(tomorrowWeather.value);
+            // 3天天气预报数据
+            const threeDayForecast = [];
+            const dayNames = ['今日', '明日', '后日'];
+            
+            for (let i = 0; i < 3 && i < daily.skycon.length; i++) {
+                const weather = daily.skycon[i];
+                const temp = daily.temperature[i];
+                const uv = daily.ultraviolet && daily.ultraviolet[i] ? daily.ultraviolet[i] : null;
+                
+                // 获取日期
+                const date = new Date(weather.date);
+                const monthDay = `${date.getMonth() + 1}/${date.getDate()}`;
+                
+                threeDayForecast.push({
+                    day: dayNames[i],
+                    date: monthDay,
+                    maxTemp: Math.round(temp.max),
+                    minTemp: Math.round(temp.min),
+                    description: this.getWeatherDescription(weather.value),
+                    uvIndex: uv ? Math.round(uv.max) : '未知'
+                });
+            }
+
+            // 兼容原有代码，保留今日和明日数据
+            const todayData = threeDayForecast[0] || {};
+            const tomorrowData = threeDayForecast[1] || {};
 
             // UV指数
             const uvIndex = daily.ultraviolet && daily.ultraviolet[0] ? 
@@ -164,12 +184,15 @@ class CaiyunWeatherService {
                     feelsLike: feelLike,
                     visibility: visibility,
                     pressure: pressure,
-                    cloudRate: cloudRate
+                    cloudRate: cloudRate,
+                    uvIndex: currentUVIndex,
+                    comfort: currentComfort
                 },
+                threeDayForecast: threeDayForecast,
                 today: {
-                    maxTemp: todayMax,
-                    minTemp: todayMin,
-                    description: todayDesc,
+                    maxTemp: todayData.maxTemp || 0,
+                    minTemp: todayData.minTemp || 0,
+                    description: todayData.description || '未知',
                     uvIndex: uvIndex,
                     uvDesc: todayUVIndex,
                     coldRisk: todayColdRisk,
@@ -177,9 +200,9 @@ class CaiyunWeatherService {
                     carWashing: todayCarWashing
                 },
                 tomorrow: {
-                    maxTemp: tomorrowMax,
-                    minTemp: tomorrowMin,
-                    description: tomorrowDesc
+                    maxTemp: tomorrowData.maxTemp || 0,
+                    minTemp: tomorrowData.minTemp || 0,
+                    description: tomorrowData.description || '未知'
                 },
                 hourly: hourly, // 添加小时级数据
                 forecastKeypoint: forecastKeypoint, // 天气关键描述
@@ -331,75 +354,33 @@ class CaiyunWeatherService {
             return `🌤️ ${weatherData.location}天气\n❌ ${weatherData.message}`;
         }
 
-        const { location, current, today, tomorrow, airQuality, forecastKeypoint, alerts } = weatherData;
+        const { location, current, today, tomorrow, threeDayForecast, airQuality, forecastKeypoint, alerts } = weatherData;
 
+        // 构建主要天气信息
         const weatherEmail = [
             `🌤️ ${location}天气 (彩云天气)`,
             '- - - - - - - - - - - - - - - -',
             `🌡️ 当前: ${current.temperature}°C ${current.description}`,
+        ];
+
+        // 添加天气趋势（紧跟在当前天气下面）
+        if (forecastKeypoint && forecastKeypoint.trim()) {
+            weatherEmail.push(`🎯 天气趋势: ${forecastKeypoint}`);
+        }
+
+        weatherEmail.push(
             `💧 湿度: ${current.humidity}% | 🌬️ ${current.windDirection} ${current.windSpeed}km/h`,
             `🤲 体感: ${current.feelsLike}°C | 👁️ 能见度: ${current.visibility}km`,
             `📊 气压: ${current.pressure}hPa | ☁️ 云量: ${current.cloudRate}%`,
-            '',
-            `📅 今日: ${today.minTemp}°C ~ ${today.maxTemp}°C`,
-            `☀️ ${today.description} | 🌞 紫外线: ${today.uvDesc}`,
-            '',
-            `📅 明日: ${tomorrow.minTemp}°C ~ ${tomorrow.maxTemp}°C`,
-            `☀️ ${tomorrow.description}`,
-        ];
+            `🌞 紫外线: ${current.uvIndex} | 😌 舒适度: ${current.comfort}`
+        );
 
-        // 添加天气预警信息
-        if (alerts && alerts.length > 0) {
-            weatherEmail.push(
-                '',
-                '⚠️ 天气预警',
-                '- - - - - - - - - - - - - - - -'
-            );
-            alerts.forEach(alert => {
-                weatherEmail.push(`${this.getAlertEmoji(alert.level)} ${alert.title}`);
-                if (alert.description) {
-                    weatherEmail.push(`   ${alert.description.substring(0, 50)}...`);
-                }
-            });
-        }
-
-        // 添加空气质量信息（简化版）
+        // 添加空气质量信息（合并到青羊区天气）
         if (airQuality && !airQuality.error) {
             const aqiLevel = this.getAQILevel(airQuality.aqi);
-            weatherEmail.push(
-                '',
-                '🌫️ 空气质量',
-                '- - - - - - - - - - - - - - - -',
-                `${aqiLevel.emoji} ${aqiLevel.level} (AQI: ${airQuality.aqi})`
-            );
+            weatherEmail.push(`🌫️ 空气质量: ${aqiLevel.emoji} ${aqiLevel.level} (AQI: ${airQuality.aqi})`);
         } else if (airQuality && airQuality.error) {
-            weatherEmail.push(
-                '',
-                '🌫️ 空气质量',
-                '- - - - - - - - - - - - - - - -',
-                `❌ ${airQuality.message}`
-            );
-        }
-
-        // 添加天气关键预测
-        if (forecastKeypoint && forecastKeypoint.trim()) {
-            weatherEmail.push(
-                '',
-                '🎯 天气趋势',
-                '- - - - - - - - - - - - - - - -',
-                `📈 ${forecastKeypoint}`
-            );
-        }
-
-        // 添加12小时天气预报
-        const hourlyForecast = this.format12HourForecast(weatherData);
-        if (hourlyForecast) {
-            weatherEmail.push(
-                '',
-                '⏰ 12小时预报',
-                '- - - - - - - - - - - - - - - -',
-                hourlyForecast
-            );
+            weatherEmail.push(`🌫️ 空气质量: ❌ ${airQuality.message}`);
         }
 
         // 添加生活建议
@@ -421,6 +402,61 @@ class CaiyunWeatherService {
                 '- - - - - - - - - - - - - - - -',
                 ...lifeAdvice
             );
+        }
+
+        // 添加12小时天气预报
+        const hourlyForecast = this.format12HourForecast(weatherData);
+        if (hourlyForecast) {
+            weatherEmail.push(
+                '',
+                '⏰ 12小时预报',
+                '- - - - - - - - - - - - - - - -',
+                hourlyForecast
+            );
+        }
+
+        // 添加3天天气预报表格
+        if (threeDayForecast && threeDayForecast.length > 0) {
+            weatherEmail.push(
+                '',
+                '📅 3天天气预报',
+                '- - - - - - - - - - - - - - - -',
+                '日期     温度范围      天气状况',
+                '- - - - - - - - - - - - - - - -'
+            );
+            
+            threeDayForecast.forEach(day => {
+                // 日期列：固定宽度
+                const dayStr = day.day === '今日' ? '今日     ' : 
+                              day.day === '明日' ? '明日     ' : 
+                              day.day === '后日' ? '后日     ' : day.day.padEnd(9, ' ');
+                
+                // 温度范围列：确保对齐，考虑数字位数差异
+                const minTemp = day.minTemp.toString().padStart(2, ' '); // 右对齐温度
+                const maxTemp = day.maxTemp.toString().padStart(2, ' '); // 右对齐温度
+                const tempRange = `${minTemp}°C~${maxTemp}°C`;
+                const tempStr = tempRange.padEnd(14, ' '); // 增加宽度确保对齐
+                
+                // 天气状况
+                const weatherStr = day.description;
+                
+                weatherEmail.push(`${dayStr}${tempStr}${weatherStr}`);
+            });
+        }
+
+        // 添加天气预警信息
+        if (alerts && alerts.length > 0) {
+            weatherEmail.push(
+                '',
+                '⚠️ 天气预警',
+                '- - - - - - - - - - - - - - - -'
+            );
+            alerts.forEach(alert => {
+                weatherEmail.push(`${this.getAlertEmoji(alert.level)} ${alert.title}`);
+                if (alert.description) {
+                    weatherEmail.push(`   ${alert.description.substring(0, 50)}...`);
+                }
+            });
         }
 
         return weatherEmail.join('\n');
