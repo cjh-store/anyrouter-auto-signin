@@ -9,11 +9,11 @@ import dotenv from 'dotenv';
 // 必须先加载环境变量，再导入其他模块
 dotenv.config();
 
-import WeatherService from './weather.js';
+import CaiyunWeatherService from './weather-caiyun.js';
 import NotificationKit from './notify.js';
 
 // 创建服务实例
-const weatherService = new WeatherService();
+const weatherService = new CaiyunWeatherService();
 const notify = new NotificationKit();
 
 /**
