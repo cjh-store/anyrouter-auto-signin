@@ -20,7 +20,7 @@ class NotificationKit {
 	/**
 	 * 发送邮件通知
 	 */
-	async sendEmail(title, content, msgType = 'text') {
+	async sendEmail(title, content, msgType = 'text', senderName = '🤖 AnyRouter 签到助手') {
 		if (!this.emailUser || !this.emailPass || !this.emailTo) {
 			throw new Error('邮箱配置未设置');
 		}
@@ -31,14 +31,14 @@ class NotificationKit {
 			secure: true,
 			auth: {
 				user: this.emailUser,
-				pass: this.emailPass
-			}
+				pass: this.emailPass,
+			},
 		});
 
 		const mailOptions = {
-			from: `🤖 AnyRouter 自动签到助手 <${this.emailUser}>`,
+			from: `${senderName} <${this.emailUser}>`,
 			to: this.emailTo,
-			subject: title
+			subject: title,
 		};
 
 		if (msgType === 'html') {
@@ -62,11 +62,11 @@ class NotificationKit {
 			token: this.pushplusToken,
 			title: title,
 			content: content,
-			template: 'html'
+			template: 'html',
 		};
 
 		await axios.post('http://www.pushplus.plus/send', data, {
-			timeout: 30000
+			timeout: 30000,
 		});
 	}
 
@@ -80,14 +80,12 @@ class NotificationKit {
 
 		const data = {
 			title: title,
-			desp: content
+			desp: content,
 		};
 
-		await axios.post(
-			`https://sctapi.ftqq.com/${this.serverPushKey}.send`,
-			data,
-			{ timeout: 30000 }
-		);
+		await axios.post(`https://sctapi.ftqq.com/${this.serverPushKey}.send`, data, {
+			timeout: 30000,
+		});
 	}
 
 	/**
@@ -101,12 +99,12 @@ class NotificationKit {
 		const data = {
 			msgtype: 'text',
 			text: {
-				content: `${title}\n${content}`
-			}
+				content: `${title}\n${content}`,
+			},
 		};
 
 		await axios.post(this.dingdingWebhook, data, {
-			timeout: 30000
+			timeout: 30000,
 		});
 	}
 
@@ -125,21 +123,21 @@ class NotificationKit {
 					{
 						tag: 'markdown',
 						content: content,
-						text_align: 'left'
-					}
+						text_align: 'left',
+					},
 				],
 				header: {
 					template: 'blue',
 					title: {
 						content: title,
-						tag: 'plain_text'
-					}
-				}
-			}
+						tag: 'plain_text',
+					},
+				},
+			},
 		};
 
 		await axios.post(this.feishuWebhook, data, {
-			timeout: 30000
+			timeout: 30000,
 		});
 	}
 
@@ -154,26 +152,26 @@ class NotificationKit {
 		const data = {
 			msgtype: 'text',
 			text: {
-				content: `${title}\n${content}`
-			}
+				content: `${title}\n${content}`,
+			},
 		};
 
 		await axios.post(this.weixinWebhook, data, {
-			timeout: 30000
+			timeout: 30000,
 		});
 	}
 
 	/**
 	 * 推送消息到所有配置的通知渠道
 	 */
-	async pushMessage(title, content, msgType = 'text') {
+	async pushMessage(title, content, msgType = 'text', senderName = '🤖 AnyRouter 签到助手') {
 		const notifications = [
-			{ name: '邮件', fn: () => this.sendEmail(title, content, msgType) },
+			{ name: '邮件', fn: () => this.sendEmail(title, content, msgType, senderName) },
 			{ name: 'PushPlus', fn: () => this.sendPushplus(title, content) },
 			{ name: 'Server酱', fn: () => this.sendServerPush(title, content) },
 			{ name: '钉钉', fn: () => this.sendDingtalk(title, content) },
 			{ name: '飞书', fn: () => this.sendFeishu(title, content) },
-			{ name: '企业微信', fn: () => this.sendWecom(title, content) }
+			{ name: '企业微信', fn: () => this.sendWecom(title, content) },
 		];
 
 		for (const { name, fn } of notifications) {

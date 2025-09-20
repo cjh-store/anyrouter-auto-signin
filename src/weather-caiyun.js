@@ -155,6 +155,7 @@ class CaiyunWeatherService {
                     minTemp: tomorrowMin,
                     description: tomorrowDesc
                 },
+                hourly: hourly, // 添加小时级数据
                 alerts: this.formatAlerts(result.alert || {})
             };
 
@@ -322,17 +323,14 @@ class CaiyunWeatherService {
             });
         }
 
-        // 添加空气质量信息
+        // 添加空气质量信息（简化版）
         if (airQuality && !airQuality.error) {
             const aqiLevel = this.getAQILevel(airQuality.aqi);
             weatherEmail.push(
                 '',
                 '🌫️ 空气质量',
                 '- - - - - - - - - - - - - - - -',
-                `${aqiLevel.emoji} AQI: ${airQuality.aqi} (${aqiLevel.level})`,
-                `💨 PM2.5: ${airQuality.pm25}μg/m³ | PM10: ${airQuality.pm10}μg/m³`,
-                `🏭 NO₂: ${airQuality.no2} | SO₂: ${airQuality.so2}`,
-                `⚗️ CO: ${airQuality.co} | O₃: ${airQuality.o3}`
+                `${aqiLevel.emoji} ${aqiLevel.level} (AQI: ${airQuality.aqi})`
             );
         } else if (airQuality && airQuality.error) {
             weatherEmail.push(
@@ -340,6 +338,17 @@ class CaiyunWeatherService {
                 '🌫️ 空气质量',
                 '- - - - - - - - - - - - - - - -',
                 `❌ ${airQuality.message}`
+            );
+        }
+
+        // 添加12小时天气预报
+        const hourlyForecast = this.format12HourForecast(weatherData);
+        if (hourlyForecast) {
+            weatherEmail.push(
+                '',
+                '⏰ 12小时预报',
+                '- - - - - - - - - - - - - - - -',
+                hourlyForecast
             );
         }
 
@@ -464,6 +473,66 @@ class CaiyunWeatherService {
         }
 
         return tips.length > 0 ? '\n💡 温馨提示:\n' + tips.join('\n') : '';
+    }
+
+    /**
+     * 格式化12小时天气预报
+     */
+    format12HourForecast(weatherData) {
+        try {
+            if (weatherData.error || !weatherData.hourly) {
+                return null;
+            }
+
+            const hourly = weatherData.hourly;
+            const temperatureData = hourly.temperature?.slice(0, 12) || [];
+            const skyconData = hourly.skycon?.slice(0, 12) || [];
+            const precipitationData = hourly.precipitation?.slice(0, 12) || [];
+
+            if (temperatureData.length === 0) {
+                return '暂无小时预报数据';
+            }
+
+            const forecastLines = [];
+            
+            for (let i = 0; i < Math.min(12, temperatureData.length); i++) {
+                const temp = temperatureData[i];
+                const sky = skyconData[i];
+                const precip = precipitationData[i];
+
+                if (!temp || !temp.datetime) continue;
+
+                // 解析时间
+                const datetime = new Date(temp.datetime);
+                const hour = datetime.getHours().toString().padStart(2, '0');
+                const timeStr = `${hour}:00`;
+
+                // 温度
+                const temperature = Math.round(temp.value) + '°C';
+
+                // 天气状况
+                const weatherDesc = sky ? this.getWeatherDescription(sky.value) : '未知';
+
+                // 降水信息
+                let precipInfo = '';
+                if (precip && precip.value > 0) {
+                    const precipMM = (precip.value).toFixed(1);
+                    precipInfo = ` ${precipMM}mm`;
+                } else {
+                    precipInfo = ' 无雨';
+                }
+
+                // 格式化行：时间 温度 天气 降水
+                const forecastLine = `${timeStr} ${temperature.padEnd(5)} ${weatherDesc.padEnd(6)} ${precipInfo}`;
+                forecastLines.push(forecastLine);
+            }
+
+            return forecastLines.join('\n');
+
+        } catch (error) {
+            console.log(`[彩云天气] 格式化12小时预报失败: ${error.message}`);
+            return '12小时预报暂不可用';
+        }
     }
 }
 

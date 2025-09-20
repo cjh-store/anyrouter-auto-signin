@@ -74,7 +74,7 @@ async function main() {
             }
         }
 
-        await notify.pushMessage(emailTitle, fullWeatherContent, 'text');
+        await notify.pushMessage(emailTitle, fullWeatherContent, 'text', '🌤️ 天气推送助手');
         
         console.log('[天气] 天气信息推送完成');
         process.exit(0);
@@ -97,7 +97,8 @@ async function main() {
             await notify.pushMessage(
                 '🚨 天气推送异常',
                 errorMessage,
-                'text'
+                'text',
+                '🌤️ 天气推送助手'
             );
         } catch (notifyError) {
             console.error('[失败] 发送错误通知失败:', notifyError.message);
