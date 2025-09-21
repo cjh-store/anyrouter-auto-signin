@@ -11,14 +11,14 @@ class CaiyunWeatherService {
         this.latitude = 30.67; // 成都青羊区纬度
         this.longitude = 104.06; // 成都青羊区经度
         this.baseUrl = 'https://api.caiyunapp.com/v2.6';
-        this.isDebugMode = false; // 关闭调试模式
+        this.isDebugMode = true; // 关闭调试模式
     }
 
     /**
      * 调试日志输出
      */
     debugLog(message) {
-        if (this.isDebugMode) {
+        if (this.isDebugMode&&String(message).length<100) {
             console.log(`[DEBUG] ${message}`);
         }
     }
@@ -118,8 +118,6 @@ class CaiyunWeatherService {
             const windDirection = this.getWindDirection(realtime.wind.direction);
             const feelLike = Math.round(realtime.apparent_temperature);
             const visibility = realtime.visibility || 0; // 能见度 km
-            const pressure = Math.round(realtime.pressure / 100); // Pa 转 hPa
-            const cloudRate = Math.round(realtime.cloudrate * 100); // 云量百分比
 
             // 实时生活指数
             const realtimeLifeIndex = realtime.life_index || {};
@@ -183,8 +181,6 @@ class CaiyunWeatherService {
                     windDirection: windDirection,
                     feelsLike: feelLike,
                     visibility: visibility,
-                    pressure: pressure,
-                    cloudRate: cloudRate,
                     uvIndex: currentUVIndex,
                     comfort: currentComfort
                 },
@@ -356,6 +352,9 @@ class CaiyunWeatherService {
 
         const { location, current, today, tomorrow, threeDayForecast, airQuality, forecastKeypoint, alerts } = weatherData;
 
+        // 获取穿衣建议
+        const dressingAdvice = this.getDressingAdvice(current.temperature);
+
         // 构建主要天气信息
         const weatherEmail = [
             `🌤️ ${location}天气 (彩云天气)`,
@@ -371,7 +370,6 @@ class CaiyunWeatherService {
         weatherEmail.push(
             `💧 湿度: ${current.humidity}% | 🌬️ ${current.windDirection} ${current.windSpeed}km/h`,
             `🤲 体感: ${current.feelsLike}°C | 👁️ 能见度: ${current.visibility}km`,
-            `📊 气压: ${current.pressure}hPa | ☁️ 云量: ${current.cloudRate}%`,
             `🌞 紫外线: ${current.uvIndex} | 😌 舒适度: ${current.comfort}`
         );
 
@@ -388,9 +386,8 @@ class CaiyunWeatherService {
         if (today.coldRisk && today.coldRisk !== '未知') {
             lifeAdvice.push(`🤧 感冒指数: ${today.coldRisk}`);
         }
-        if (today.dressing && today.dressing !== '未知') {
-            lifeAdvice.push(`👕 穿衣建议: ${today.dressing}`);
-        }
+        // 使用自己计算的穿衣建议
+        lifeAdvice.push(`👕 穿衣建议: ${dressingAdvice.emoji} ${dressingAdvice.level} - ${dressingAdvice.advice}`);
         if (today.carWashing && today.carWashing !== '未知') {
             lifeAdvice.push(`🚗 洗车指数: ${today.carWashing}`);
         }
@@ -505,6 +502,63 @@ class CaiyunWeatherService {
     }
 
     /**
+     * 根据温度获取穿衣建议
+     */
+    getDressingAdvice(temperature) {
+        const temp = parseInt(temperature);
+        
+        if (temp >= 35) {
+            return {
+                level: '炎热',
+                advice: '建议穿短袖、短裤等轻薄衣物，注意防晒',
+                emoji: '🔥'
+            };
+        } else if (temp >= 30) {
+            return {
+                level: '热',
+                advice: '建议穿短袖、短裤等轻薄衣物',
+                emoji: '☀️'
+            };
+        } else if (temp >= 25) {
+            return {
+                level: '温暖',
+                advice: '建议穿长袖衬衫、薄外套等',
+                emoji: '🌤️'
+            };
+        } else if (temp >= 20) {
+            return {
+                level: '舒适',
+                advice: '建议穿长袖T恤、薄外套等',
+                emoji: '😊'
+            };
+        } else if (temp >= 15) {
+            return {
+                level: '凉爽',
+                advice: '建议穿长袖、薄毛衣、外套等',
+                emoji: '🍂'
+            };
+        } else if (temp >= 10) {
+            return {
+                level: '较冷',
+                advice: '建议穿厚外套、毛衣等保暖衣物',
+                emoji: '🧥'
+            };
+        } else if (temp >= 5) {
+            return {
+                level: '冷',
+                advice: '建议穿羽绒服、厚毛衣等保暖衣物',
+                emoji: '🧣'
+            };
+        } else {
+            return {
+                level: '严寒',
+                advice: '建议穿厚羽绒服、保暖内衣等，注意防寒',
+                emoji: '❄️'
+            };
+        }
+    }
+
+    /**
      * 获取天气预警信息
      */
     getWeatherTips(weatherData) {
@@ -526,7 +580,10 @@ class CaiyunWeatherService {
             });
         }
 
-        // 温度提醒
+        // 温度提醒和穿衣建议
+        const dressingAdvice = this.getDressingAdvice(currentTemp);
+        tips.push(`👕 ${dressingAdvice.emoji} ${dressingAdvice.level} - ${dressingAdvice.advice}`);
+        
         if (currentTemp <= 5) {
             tips.push('❄️ 气温较低，注意保暖');
         } else if (currentTemp >= 35) {
