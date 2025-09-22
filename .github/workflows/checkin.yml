@@ -2,8 +2,10 @@ name: AnyRouter 自动签到 (Node.js)
 
 on:
   schedule:
-    # 每6小时执行一次
-    - cron: '0 */6 * * *'
+    # 中国时间早8点执行（UTC 0点）
+    - cron: '0 0 * * *'
+    # 中国时间晚8点执行（UTC 12点）
+    - cron: '0 12 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
