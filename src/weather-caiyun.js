@@ -640,7 +640,7 @@ class CaiyunWeatherService {
     }
 
     /**
-     * 格式化12小时天气预报
+     * 格式化12小时天气预报（08:00-22:00）
      */
     format12HourForecast(weatherData) {
         try {
@@ -649,38 +649,54 @@ class CaiyunWeatherService {
             }
 
             const hourly = weatherData.hourly;
-            const temperatureData = hourly.temperature?.slice(0, 12) || [];
-            const skyconData = hourly.skycon?.slice(0, 12) || [];
-            const precipitationData = hourly.precipitation?.slice(0, 12) || [];
+            const temperatureData = hourly.temperature || [];
+            const skyconData = hourly.skycon || [];
+            const precipitationData = hourly.precipitation || [];
 
             if (temperatureData.length === 0) {
                 return '暂无小时预报数据';
             }
 
             const forecastLines = [];
-            
-            for (let i = 0; i < Math.min(12, temperatureData.length); i++) {
-                const temp = temperatureData[i];
-                const sky = skyconData[i];
-                const precip = precipitationData[i];
 
-                if (!temp || !temp.datetime) continue;
+            // 固定显示08:00到22:00的天气预报
+            const targetHours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 
-                // 解析时间
-                const datetime = new Date(temp.datetime);
-                const hour = datetime.getHours().toString().padStart(2, '0');
-                const timeStr = `${hour}:00`;
+            for (const targetHour of targetHours) {
+                // 从数据中找到对应时间的数据
+                const tempData = temperatureData.find(item => {
+                    if (!item.datetime) return false;
+                    const datetime = new Date(item.datetime);
+                    return datetime.getHours() === targetHour;
+                });
+
+                const skyData = skyconData.find(item => {
+                    if (!item.datetime) return false;
+                    const datetime = new Date(item.datetime);
+                    return datetime.getHours() === targetHour;
+                });
+
+                const precipData = precipitationData.find(item => {
+                    if (!item.datetime) return false;
+                    const datetime = new Date(item.datetime);
+                    return datetime.getHours() === targetHour;
+                });
+
+                if (!tempData) continue;
+
+                // 格式化时间
+                const timeStr = `${targetHour.toString().padStart(2, '0')}:00`;
 
                 // 温度
-                const temperature = Math.round(temp.value) + '°C';
+                const temperature = Math.round(tempData.value) + '°C';
 
                 // 天气状况
-                const weatherDesc = sky ? this.getWeatherDescription(sky.value) : '未知';
+                const weatherDesc = skyData ? this.getWeatherDescription(skyData.value) : '未知';
 
                 // 降水信息
                 let precipInfo = '';
-                if (precip && precip.value > 0) {
-                    const precipMM = (precip.value).toFixed(1);
+                if (precipData && precipData.value > 0) {
+                    const precipMM = (precipData.value).toFixed(1);
                     precipInfo = ` ${precipMM}mm`;
                 } else {
                     precipInfo = ' 无雨';

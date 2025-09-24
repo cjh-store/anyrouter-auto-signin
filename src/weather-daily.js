@@ -22,7 +22,7 @@ const notify = new NotificationKit();
 async function main() {
     try {
         console.log('[天气] 成都青羊区天气每日推送脚本启动');
-        console.log(`[时间] 执行时间: ${new Date().toLocaleString('zh-CN')}`);
+        console.log(`[时间] 执行时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`);
 
         // 获取天气信息
         console.log('[天气] 开始获取成都青羊区天气信息...');
@@ -97,7 +97,7 @@ async function main() {
                 '⚠️ 天气推送过程中发生错误:',
                 error.message,
                 '',
-                `⏰ 错误时间: ${new Date().toLocaleString('zh-CN')}`,
+                `⏰ 错误时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`,
                 '',
                 '🔧 请检查网络连接或API服务状态'
             ].join('\n');

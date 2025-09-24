@@ -297,7 +297,7 @@ class AnyRouterChecker {
 	 */
 	async run() {
 		console.log('[系统] AnyRouter.top 多账号自动签到脚本启动 (使用 Playwright)');
-		console.log(`[时间] 执行时间: ${new Date().toLocaleString('zh-CN')}`);
+		console.log(`[时间] 执行时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`);
 
 		if (!this.accounts) {
 			console.log('[失败] 无法加载账号配置，程序退出');

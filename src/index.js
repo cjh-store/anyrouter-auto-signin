@@ -21,7 +21,7 @@ const notify = new NotificationKit();
 async function main() {
 	try {
 		console.log('[系统] AnyRouter.top 多账号自动签到脚本启动 (Node.js 版)');
-		console.log(`[时间] 执行时间: ${new Date().toLocaleString('zh-CN')}`);
+		console.log(`[时间] 执行时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`);
 
 		// 创建签到实例
 		const checker = new AnyRouterChecker();
@@ -80,7 +80,7 @@ async function main() {
 		summary.push('', overallStatus);
 
 		// 时间信息
-		const timeInfo = `⏰ 执行时间: ${new Date().toLocaleString('zh-CN')}`;
+		const timeInfo = `⏰ 执行时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`;
 
 		// 组合完整的通知内容
 		const header = [
